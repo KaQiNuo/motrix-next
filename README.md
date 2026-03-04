@@ -25,7 +25,7 @@ We owe a great deal to the original [Motrix](https://github.com/agalwood/Motrix)
 
 - **Aria2 error code system and RPC client** — the error handling conventions and JSON-RPC communication layer for the aria2 engine
 - **Internationalization** — 25+ community-contributed locale files covering Chinese, Japanese, Korean, Arabic, French, German, and many more
-- **Download utilities** — tracker list management, cURL command parsing, and other protocol-level helperst management, cURL parsing, and related helpers
+- **Download utilities** — tracker list management, cURL command parsing, and other protocol-level helpers
 
 ### What we rebuilt
 
