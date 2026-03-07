@@ -157,6 +157,7 @@ The workflow creates a draft release with all artifacts and a `latest.json` mani
 
 - [Motrix](https://github.com/agalwood/Motrix) by [agalwood](https://github.com/agalwood) and all its contributors
 - [Aria2](https://aria2.github.io/) — the powerful download engine at the core
+- Community translators who contributed 25+ locale files for worldwide accessibility
 
 ## Contributing
 
