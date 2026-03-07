@@ -72,17 +72,14 @@ async function autoCheckForUpdate() {
 preferenceStore.loadPreference().then(async () => {
     let locale = preferenceStore.locale
     if (!locale) {
-        // First launch: detect system language via Tauri native API
-        // navigator.language is unreliable in WebView2 (Windows) and webkit2gtk (Linux)
         try {
-            const { locale: osLocale } = await import('@tauri-apps/plugin-os')
-            const sysLang = (await osLocale()) || 'en-US' // e.g. 'zh-CN', 'en-US', 'ja-JP'
-            const available = Object.keys(i18n.global.messages)
-            // Exact match first (e.g. 'zh-CN' → 'zh-CN')
+            const { getLocale } = await import('tauri-plugin-locale-api')
+            const raw = (await getLocale()) || 'en-US'
+            const sysLang = raw.replace('-Hans', '').replace('-Hant', '')
+            const available = i18n.global.availableLocales
             if (available.includes(sysLang)) {
                 locale = sysLang
             } else {
-                // Prefix match (e.g. 'zh' → 'zh-CN', 'pt' → 'pt-BR', 'ja-JP' → 'ja')
                 const prefix = sysLang.split('-')[0]
                 locale = available.find(l => l === prefix || l.startsWith(prefix + '-')) || 'en-US'
             }

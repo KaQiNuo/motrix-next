@@ -13,6 +13,7 @@
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-show",
+    "core:window:allow-set-focus",
     "opener:default",
     "store:default",
     "shell:default",
@@ -51,6 +52,7 @@
     "clipboard-manager:allow-read-text",
     "autostart:default",
     "updater:default",
-    "deep-link:default"
+    "deep-link:default",
+    "locale:default"
   ]
 }
