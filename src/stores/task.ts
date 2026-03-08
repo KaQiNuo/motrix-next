@@ -279,10 +279,14 @@ export const useTaskStore = defineStore('task', () => {
 
   /**
    * Restarts a stopped/errored/completed task by extracting its URI(s),
-   * removing the old record, and re-submitting as a new download.
-   * For BT tasks, rebuilds the magnet link with trackers.
-   * For multi-file HTTP/FTP tasks, collects all file URIs.
-   * Throws if no URIs can be recovered.
+   * re-submitting each as a new download, and removing the old record.
+   *
+   * For BT tasks: rebuilds the magnet link → single addUri call.
+   * For multi-file HTTP/FTP tasks: submits each file URI separately.
+   *
+   * Uses rollback on partial failure: if any URI fails to submit, all
+   * previously created downloads are removed so no orphan tasks remain.
+   * The old stopped record is only deleted after ALL new downloads succeed.
    */
   async function restartTask(task: Aria2Task) {
     const { status, gid, dir } = task
@@ -294,14 +298,29 @@ export const useTaskStore = defineStore('task', () => {
       throw new Error('Cannot restart: no download URIs found for this task')
     }
 
-    // Re-submit with original directory FIRST — only remove old record on success.
-    // Use addUriAtomic to submit all URIs as mirrors in a single aria2 call,
-    // avoiding partial-success scenarios where some URIs succeed and others fail.
     const options: Record<string, string> = {}
     if (dir) options.dir = dir
-    await api.addUriAtomic({ uris, options })
 
-    // New task succeeded — safe to remove old stopped record
+    // Submit each URI as a separate download, tracking created GIDs for rollback
+    const createdGids: string[] = []
+    try {
+      for (const uri of uris) {
+        const newGid = await api.addUriAtomic({ uris: [uri], options })
+        createdGids.push(newGid)
+      }
+    } catch (e) {
+      // Rollback: remove any partially created tasks
+      for (const newGid of createdGids) {
+        try {
+          await api.removeTask({ gid: newGid })
+        } catch {
+          // best-effort cleanup
+        }
+      }
+      throw e // propagate original error to caller
+    }
+
+    // All new downloads succeeded — safe to remove old stopped record
     try {
       await api.removeTaskRecord({ gid })
     } catch (e) {

@@ -379,4 +379,106 @@ describe('TaskStore', () => {
     store.saveSession()
     expect(mockApi.saveSession).toHaveBeenCalled()
   })
+  // ─── restartTask ───────────────────────────────────────
+
+  it('restartTask submits single URI and removes old record on success', async () => {
+    const task = makeMockTask('stopped1', 'error', {
+      files: [
+        {
+          index: '1',
+          path: '/tmp/file.zip',
+          length: '1000',
+          completedLength: '0',
+          selected: 'true',
+          uris: [{ uri: 'http://example.com/file.zip', status: 'used' }],
+        },
+      ],
+    })
+    mockApi.addUriAtomic.mockResolvedValue('new-gid-1')
+    await store.restartTask(task)
+
+    expect(mockApi.addUriAtomic).toHaveBeenCalledTimes(1)
+    expect(mockApi.addUriAtomic).toHaveBeenCalledWith({
+      uris: ['http://example.com/file.zip'],
+      options: { dir: '/tmp' },
+    })
+    expect(mockApi.removeTaskRecord).toHaveBeenCalledWith({ gid: 'stopped1' })
+    expect(mockApi.fetchTaskList).toHaveBeenCalled()
+  })
+
+  it('restartTask submits each URI separately for multi-file tasks', async () => {
+    const task = makeMockTask('stopped2', 'error', {
+      files: [
+        {
+          index: '1',
+          path: '/tmp/a.zip',
+          length: '500',
+          completedLength: '0',
+          selected: 'true',
+          uris: [{ uri: 'http://example.com/a.zip', status: 'used' }],
+        },
+        {
+          index: '2',
+          path: '/tmp/b.zip',
+          length: '500',
+          completedLength: '0',
+          selected: 'true',
+          uris: [{ uri: 'http://example.com/b.zip', status: 'used' }],
+        },
+      ],
+    })
+    mockApi.addUriAtomic.mockResolvedValueOnce('new-a').mockResolvedValueOnce('new-b')
+    await store.restartTask(task)
+
+    expect(mockApi.addUriAtomic).toHaveBeenCalledTimes(2)
+    expect(mockApi.addUriAtomic).toHaveBeenNthCalledWith(1, {
+      uris: ['http://example.com/a.zip'],
+      options: { dir: '/tmp' },
+    })
+    expect(mockApi.addUriAtomic).toHaveBeenNthCalledWith(2, {
+      uris: ['http://example.com/b.zip'],
+      options: { dir: '/tmp' },
+    })
+    expect(mockApi.removeTaskRecord).toHaveBeenCalledWith({ gid: 'stopped2' })
+  })
+
+  it('restartTask rolls back created tasks on partial failure', async () => {
+    const task = makeMockTask('stopped3', 'error', {
+      files: [
+        {
+          index: '1',
+          path: '/tmp/a.zip',
+          length: '500',
+          completedLength: '0',
+          selected: 'true',
+          uris: [{ uri: 'http://example.com/a.zip', status: 'used' }],
+        },
+        {
+          index: '2',
+          path: '/tmp/b.zip',
+          length: '500',
+          completedLength: '0',
+          selected: 'true',
+          uris: [{ uri: 'http://example.com/b.zip', status: 'used' }],
+        },
+      ],
+    })
+    // First URI succeeds, second fails
+    mockApi.addUriAtomic.mockResolvedValueOnce('new-a').mockRejectedValueOnce(new Error('network error'))
+
+    await expect(store.restartTask(task)).rejects.toThrow('network error')
+
+    // Rollback: the successfully created task should be removed
+    expect(mockApi.removeTask).toHaveBeenCalledWith({ gid: 'new-a' })
+    // Old record must NOT be deleted since restart failed
+    expect(mockApi.removeTaskRecord).not.toHaveBeenCalled()
+  })
+
+  it('restartTask skips non-stopped tasks', async () => {
+    const task = makeMockTask('active1', 'active')
+    await store.restartTask(task)
+
+    expect(mockApi.addUriAtomic).not.toHaveBeenCalled()
+    expect(mockApi.removeTaskRecord).not.toHaveBeenCalled()
+  })
 })
