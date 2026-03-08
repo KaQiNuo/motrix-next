@@ -36,7 +36,7 @@ export default {
   'confirm-exit-title': 'تأكيد الخروج',
   'confirm-exit-message': 'هل أنت متأكد من الخروج؟ سيتم إيقاف التنزيلات النشطة مؤقتًا.',
   'engine-not-ready': 'المحرك قيد التشغيل، يرجى الانتظار...',
-  'new-version-available': 'إصدار جديد متاح',
+  'new-version-available': 'تحديث متاح',
   'tray-new-task': 'مهمة جديدة',
   'tray-resume-all': 'استئناف الكل',
   'tray-pause-all': 'إيقاف الكل مؤقتاً',

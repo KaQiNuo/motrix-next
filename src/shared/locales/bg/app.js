@@ -36,7 +36,7 @@ export default {
   'confirm-exit-title': 'Потвърди затваряне',
   'confirm-exit-message': 'Сигурни ли сте, че искате да излезете? Активните изтегляния ще бъдат спрени.',
   'engine-not-ready': 'Двигателят се стартира, моля изчакайте...',
-  'new-version-available': 'Налична нова версия',
+  'new-version-available': 'Налична актуализация',
   'tray-new-task': 'Нова задача',
   'tray-resume-all': 'Подновяване на всички',
   'tray-pause-all': 'Спиране на всички',

@@ -214,9 +214,6 @@ defineExpose({ open })
             <div v-if="releaseNotes" class="update-notes">
               <div class="update-notes-text" v-html="renderedNotes" />
             </div>
-            <NButton type="primary" style="min-width: 180px" @click="startDownload">
-              {{ t('preferences.update-and-install') }}
-            </NButton>
           </div>
 
           <div v-else-if="phase === 'downloading'" key="downloading" class="update-phase">
@@ -235,9 +232,6 @@ defineExpose({ open })
                 {{ downloadedMB }} / {{ totalMB }} MB · {{ progressPercent }}%
               </NText>
             </div>
-            <NButton size="small" quaternary style="opacity: 0.6" @click="cancelDownload">
-              {{ t('app.cancel') || 'Cancel' }}
-            </NButton>
           </div>
 
           <div v-else-if="phase === 'ready'" key="ready" class="update-phase">
@@ -245,9 +239,6 @@ defineExpose({ open })
               <NIcon :size="40"><CheckmarkCircleOutline /></NIcon>
             </div>
             <NText class="update-main-text">{{ t('preferences.update-download-complete') }}</NText>
-            <NButton type="primary" style="min-width: 160px" @click="handleRelaunch">
-              {{ t('preferences.restart-now') }}
-            </NButton>
           </div>
 
           <div v-else-if="phase === 'error'" key="error" class="update-phase">
@@ -264,6 +255,18 @@ defineExpose({ open })
             </NSpace>
           </div>
         </Transition>
+      </div>
+      <!-- Fixed action footer — always visible below scrollable body -->
+      <div v-if="phase === 'available' || phase === 'downloading' || phase === 'ready'" class="update-dialog-footer">
+        <NButton v-if="phase === 'available'" type="primary" style="min-width: 200px" @click="startDownload">
+          {{ t('preferences.update-and-install') }}
+        </NButton>
+        <NButton v-else-if="phase === 'downloading'" style="min-width: 200px" @click="cancelDownload">
+          {{ t('app.cancel') }}
+        </NButton>
+        <NButton v-else-if="phase === 'ready'" type="primary" style="min-width: 200px" @click="handleRelaunch">
+          {{ t('preferences.restart-now') }}
+        </NButton>
       </div>
     </div>
   </NModal>
@@ -306,12 +309,18 @@ defineExpose({ open })
 .update-dialog-body {
   position: relative;
   padding: 14px 30px 28px;
-  height: 310px;
+  height: 360px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow-y: auto;
+}
+.update-dialog-footer {
+  display: flex;
+  justify-content: center;
+  padding: 16px 30px 22px;
+  border-top: 1px solid var(--n-border-color, rgba(255, 255, 255, 0.08));
 }
 .update-dialog-title-group {
   display: flex;

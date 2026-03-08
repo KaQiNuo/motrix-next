@@ -103,6 +103,9 @@ pub async fn check_for_update(
         .updater_builder()
         .endpoints(vec![endpoint])
         .map_err(|e| AppError::Updater(e.to_string()))?
+        // Allow cross-channel switching (e.g. beta → stable, even if it is
+        // a semver "downgrade"). Any version != current is an update.
+        .version_comparator(|current, update| update.version.to_string() != current.to_string())
         .build()
         .map_err(|e| AppError::Updater(e.to_string()))?
         .check()
@@ -138,6 +141,7 @@ pub async fn install_update(
         .updater_builder()
         .endpoints(vec![endpoint])
         .map_err(|e| AppError::Updater(e.to_string()))?
+        .version_comparator(|current, update| update.version.to_string() != current.to_string())
         .build()
         .map_err(|e| AppError::Updater(e.to_string()))?
         .check()

@@ -36,7 +36,7 @@ export default {
   'confirm-exit-title': 'Çıkışı onayla',
   'confirm-exit-message': 'Çıkmak istediğinizden emin misiniz? Aktif indirmeler duraklatılacak.',
   'engine-not-ready': 'Motor başlatılıyor, lütfen bekleyin...',
-  'new-version-available': 'Yeni sürüm mevcut',
+  'new-version-available': 'Güncelleme mevcut',
   'tray-new-task': 'Yeni görev',
   'tray-resume-all': 'Tümünü sürdür',
   'tray-pause-all': 'Tümünü duraklat',

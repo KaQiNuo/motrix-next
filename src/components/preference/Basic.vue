@@ -295,7 +295,16 @@ onMounted(async () => {
       </NCollapseTransition>
       <NCollapseTransition :show="form.autoCheckUpdate">
         <NFormItem :label="t('preferences.update-channel')">
-          <NRadioGroup v-model:value="form.updateChannel" size="small">
+          <NRadioGroup
+            v-model:value="form.updateChannel"
+            size="small"
+            @update:value="
+              (v: string) => {
+                preferenceStore.updateAndSave({ updateChannel: v as 'stable' | 'beta' })
+                resetSnapshot()
+              }
+            "
+          >
             <NRadioButton value="stable">{{ t('preferences.update-channel-stable') }}</NRadioButton>
             <NRadioButton value="beta">{{ t('preferences.update-channel-beta') }}</NRadioButton>
           </NRadioGroup>

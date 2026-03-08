@@ -36,7 +36,7 @@ export default {
   'confirm-exit-title': 'Confirm Exit',
   'confirm-exit-message': 'Are you sure you want to quit? Active downloads will be paused.',
   'engine-not-ready': 'Engine is starting, please wait...',
-  'new-version-available': 'New version available',
+  'new-version-available': 'Update Available',
   'tray-new-task': 'New Task',
   'tray-resume-all': 'Resume All',
   'tray-pause-all': 'Pause All',
