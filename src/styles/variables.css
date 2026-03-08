@@ -201,6 +201,13 @@
 
   --subnav-active-text: #fff;
 
+  /* ── Dark gradient: aside(darkest) → subnav(dark) → main(lighter) ── */
+  --subnav-bg: var(--m3-surface-container-low);
+  --main-bg: var(--m3-surface-container-high);
+  --panel-bg: var(--m3-surface-container-high);
+  --task-item-bg: var(--m3-surface-container);
+  --task-action-bg: var(--m3-surface-container);
+
   --window-ctrl-border: rgba(255, 255, 255, 0.12);
   --window-ctrl-bg: rgba(255, 255, 255, 0.06);
   --window-ctrl-color: rgba(255, 255, 255, 0.55);
