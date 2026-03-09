@@ -4,7 +4,7 @@ import { ref, computed, h } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { useTaskStore } from '@/stores/task'
-import { ADD_TASK_TYPE } from '@shared/constants'
+
 import { isEngineReady } from '@/api/aria2'
 import { deleteTaskFiles } from '@/composables/useFileDelete'
 import { logger } from '@shared/logger'
@@ -25,7 +25,7 @@ const currentList = computed(() => taskStore.currentList)
 const allGids = computed(() => taskStore.taskList.map((t: { gid: string }) => t.gid))
 
 function showAddTask() {
-  appStore.showAddTaskDialog(ADD_TASK_TYPE.URI)
+  appStore.showAddTaskDialog()
 }
 
 function onRefresh() {

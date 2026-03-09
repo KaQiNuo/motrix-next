@@ -240,8 +240,8 @@ preferenceStore.loadPreference().then(async () => {
       const { detectResource } = await import('@shared/utils')
       if (detectResource(text)) {
         lastClipboardText = text
-        appStore.addTaskUrl = text
-        appStore.showAddTaskDialog('uri')
+        const { createBatchItem } = await import('@shared/utils/batchHelpers')
+        appStore.enqueueBatch([createBatchItem('uri', text)])
       }
     } catch (e) {
       logger.debug('Main.clipboardMonitor', e)

@@ -3,7 +3,7 @@
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
-import { ADD_TASK_TYPE } from '@shared/constants'
+
 import { NIcon, NTooltip } from 'naive-ui'
 import { ListOutline, AddOutline, SettingsOutline, HelpCircleOutline } from '@vicons/ionicons5'
 
@@ -19,7 +19,7 @@ function nav(path: string) {
 }
 
 function showAddTask() {
-  appStore.showAddTaskDialog(ADD_TASK_TYPE.URI)
+  appStore.showAddTaskDialog()
 }
 </script>
 

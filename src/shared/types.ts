@@ -206,3 +206,28 @@ export interface TauriUpdate {
   body: string | null
   date: string | null
 }
+
+// ── Batch Add Task ──────────────────────────────────────────────────
+
+export type BatchItemKind = 'uri' | 'torrent' | 'metalink'
+export type BatchItemStatus = 'pending' | 'submitted' | 'failed'
+
+/** A single item in the add-task batch queue. */
+export interface BatchItem {
+  /** Unique identifier for this batch entry. */
+  id: string
+  kind: BatchItemKind
+  /** Original source path or URI. */
+  source: string
+  /** Human-readable display name (filename or truncated URI). */
+  displayName: string
+  /** URI text (for uri kind) or base64-encoded file content (for torrent/metalink). */
+  payload: string
+  /** Parsed torrent metadata — only present for torrent items. */
+  torrentMeta?: { infoHash: string; files: { idx: number; path: string; length: number }[] }
+  /** Selected file indices for torrent selective download. */
+  selectedFileIndices?: number[]
+  status: BatchItemStatus
+  /** Error message when status is 'failed'. */
+  error?: string
+}

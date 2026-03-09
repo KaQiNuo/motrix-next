@@ -1,12 +1,20 @@
 /** @fileoverview Pinia store for global application state: engine, tasks, stats, and polling. */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { ADD_TASK_TYPE } from '@shared/constants'
+// ADD_TASK_TYPE is no longer needed — batch items carry their own kind
 import { invoke } from '@tauri-apps/api/core'
 import { decodeThunderLink } from '@shared/utils'
 import { logger } from '@shared/logger'
 import { STAT_BASE_INTERVAL, STAT_PER_TASK_INTERVAL, STAT_MIN_INTERVAL, STAT_MAX_INTERVAL } from '@shared/timing'
-import type { Aria2RawGlobalStat, Aria2Task, Aria2EngineOptions, TauriUpdate, AppConfig } from '@shared/types'
+import { detectKind, createBatchItem } from '@shared/utils/batchHelpers'
+import type {
+  Aria2RawGlobalStat,
+  Aria2Task,
+  Aria2EngineOptions,
+  TauriUpdate,
+  AppConfig,
+  BatchItem,
+} from '@shared/types'
 
 export const useAppStore = defineStore('app', () => {
   const systemTheme = ref('light')
@@ -26,11 +34,8 @@ export const useAppStore = defineStore('app', () => {
     numStopped: 0,
   })
   const addTaskVisible = ref(false)
-  const addTaskType = ref(ADD_TASK_TYPE.URI)
-  const addTaskUrl = ref('')
-  const addTaskTorrents = ref<File[]>([])
+  const pendingBatch = ref<BatchItem[]>([])
   const addTaskOptions = ref<Aria2EngineOptions>({})
-  const droppedTorrentPaths = ref<string[]>([])
   const progress = ref(0)
   const pendingUpdate = ref<TauriUpdate | null>(null)
 
@@ -54,17 +59,25 @@ export const useAppStore = defineStore('app', () => {
     interval.value = STAT_BASE_INTERVAL
   }
 
-  function showAddTaskDialog(taskType: string, torrentPaths?: string[]) {
-    addTaskType.value = taskType
-    droppedTorrentPaths.value = torrentPaths || []
+  /**
+   * Unified entry point for all external inputs.
+   * Accepts pre-built BatchItems (already resolved) and appends them to
+   * the pending batch, then opens the add-task dialog.
+   */
+  function enqueueBatch(items: BatchItem[]) {
+    if (items.length === 0) return
+    pendingBatch.value = [...pendingBatch.value, ...items]
+    addTaskVisible.value = true
+  }
+
+  /** Opens an empty add-task dialog for manual URI entry. */
+  function showAddTaskDialog() {
     addTaskVisible.value = true
   }
 
   function hideAddTaskDialog() {
     addTaskVisible.value = false
-    addTaskUrl.value = ''
-    addTaskTorrents.value = []
-    droppedTorrentPaths.value = []
+    pendingBatch.value = []
   }
 
   function updateAddTaskOptions(options: Aria2EngineOptions = {}) {
@@ -158,54 +171,37 @@ export const useAppStore = defineStore('app', () => {
     return data
   }
 
+  /**
+   * Normalizes deep-link / argv URLs into BatchItems and enqueues them.
+   * All items land in the same batch for user review before submission.
+   */
   function handleDeepLinkUrls(urls: string[]) {
     if (!urls || urls.length === 0) return
 
-    const uriLines: string[] = []
-    const filePaths: string[] = []
+    const items: BatchItem[] = []
 
     for (const url of urls) {
       const lower = url.toLowerCase()
-      if (lower.endsWith('.torrent') || (lower.startsWith('file://') && lower.includes('.torrent'))) {
-        const filePath = url.startsWith('file://') ? decodeURIComponent(url.replace(/^file:\/\//, '')) : url
-        filePaths.push(filePath)
-      } else if (
+      if (
+        lower.endsWith('.torrent') ||
+        (lower.startsWith('file://') && lower.includes('.torrent')) ||
         lower.endsWith('.metalink') ||
         lower.endsWith('.meta4') ||
         (lower.startsWith('file://') && (lower.includes('.metalink') || lower.includes('.meta4')))
       ) {
         const filePath = url.startsWith('file://') ? decodeURIComponent(url.replace(/^file:\/\//, '')) : url
-        filePaths.push(filePath)
+        const kind = detectKind(filePath)
+        items.push(createBatchItem(kind, filePath))
       } else if (lower.startsWith('magnet:')) {
-        uriLines.push(url)
+        items.push(createBatchItem('uri', url))
       } else if (lower.startsWith('thunder://')) {
-        uriLines.push(decodeThunderLink(url))
+        items.push(createBatchItem('uri', decodeThunderLink(url)))
       } else if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('ftp://')) {
-        uriLines.push(url)
+        items.push(createBatchItem('uri', url))
       }
     }
 
-    // File-based inputs open the interactive dialog
-    if (filePaths.length > 0) {
-      showAddTaskDialog(ADD_TASK_TYPE.TORRENT, filePaths)
-    }
-
-    if (uriLines.length > 0) {
-      if (filePaths.length === 0) {
-        // Pure URI payload — open dialog for user review
-        addTaskUrl.value = uriLines.join('\n')
-        showAddTaskDialog(ADD_TASK_TYPE.URI)
-      } else {
-        // Mixed payload — dialog is showing files, so auto-submit URIs
-        // to prevent them from being silently dropped by hideAddTaskDialog.
-        import('@/stores/task').then(({ useTaskStore }) => {
-          const taskStore = useTaskStore()
-          taskStore.addUri({ uris: uriLines, outs: [], options: {} }).catch((e) => {
-            logger.warn('handleDeepLinkUrls', `auto-submit URIs failed: ${e}`)
-          })
-        })
-      }
-    }
+    enqueueBatch(items)
   }
 
   return {
@@ -217,17 +213,15 @@ export const useAppStore = defineStore('app', () => {
     interval,
     stat,
     addTaskVisible,
-    addTaskType,
-    addTaskUrl,
-    addTaskTorrents,
+    pendingBatch,
     addTaskOptions,
-    droppedTorrentPaths,
     progress,
     pendingUpdate,
     updateInterval,
     increaseInterval,
     decreaseInterval,
     resetInterval,
+    enqueueBatch,
     showAddTaskDialog,
     hideAddTaskDialog,
     updateAddTaskOptions,

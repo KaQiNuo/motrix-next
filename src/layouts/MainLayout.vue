@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
-import { ADD_TASK_TYPE } from '@shared/constants'
+import { detectKind, createBatchItem } from '@shared/utils/batchHelpers'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { listen } from '@tauri-apps/api/event'
@@ -144,12 +144,11 @@ onMounted(async () => {
   unlistenDragDrop = await webview.onDragDropEvent((event) => {
     if (event.payload.type === 'drop') {
       const paths = event.payload.paths
-      const torrentPaths = paths?.filter((p: string) => p.endsWith('.torrent')) || []
-      const metalinkPaths = paths?.filter((p: string) => p.endsWith('.metalink') || p.endsWith('.meta4')) || []
-      if (torrentPaths.length > 0) {
-        appStore.showAddTaskDialog(ADD_TASK_TYPE.TORRENT, torrentPaths)
-      } else if (metalinkPaths.length > 0) {
-        appStore.showAddTaskDialog(ADD_TASK_TYPE.TORRENT, metalinkPaths)
+      const validPaths =
+        paths?.filter((p: string) => p.endsWith('.torrent') || p.endsWith('.metalink') || p.endsWith('.meta4')) || []
+      if (validPaths.length > 0) {
+        const items = validPaths.map((p: string) => createBatchItem(detectKind(p), p))
+        appStore.enqueueBatch(items)
       }
     }
   })
@@ -157,14 +156,18 @@ onMounted(async () => {
     const action = event.payload
     switch (action) {
       case 'new-task':
-        appStore.showAddTaskDialog(ADD_TASK_TYPE.URI)
+        appStore.showAddTaskDialog()
         break
       case 'open-torrent': {
         const selected = await openDialog({
-          multiple: false,
+          multiple: true,
           filters: [{ name: 'Torrent / Metalink', extensions: ['torrent', 'metalink', 'meta4'] }],
         })
-        if (typeof selected === 'string') appStore.showAddTaskDialog(ADD_TASK_TYPE.TORRENT, [selected])
+        if (typeof selected === 'string') {
+          appStore.enqueueBatch([createBatchItem(detectKind(selected), selected)])
+        } else if (Array.isArray(selected) && selected.length > 0) {
+          appStore.enqueueBatch(selected.map((p) => createBatchItem(detectKind(p), p)))
+        }
         break
       }
       case 'preferences':
@@ -273,7 +276,7 @@ onUnmounted(() => {
     <WindowControls class="window-controls" />
     <Speedometer />
     <AboutPanel :show="showAbout" @close="showAbout = false" />
-    <AddTask :show="appStore.addTaskVisible" :type="appStore.addTaskType" @close="appStore.hideAddTaskDialog()" />
+    <AddTask :show="appStore.addTaskVisible" @close="appStore.hideAddTaskDialog()" />
     <UpdateDialog ref="updateDialogRef" />
 
     <!-- Exit confirmation dialog with synchronized fade animation -->

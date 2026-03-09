@@ -1,6 +1,6 @@
 <script setup lang="ts">
-/** @fileoverview Add task dialog: URI, torrent, and metalink input with options. */
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+/** @fileoverview Add task dialog: unified batch model for URI, torrent, and metalink inputs. */
+import { ref, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
@@ -15,6 +15,7 @@ import { downloadDir } from '@tauri-apps/api/path'
 import { readFile } from '@tauri-apps/plugin-fs'
 import { logger } from '@shared/logger'
 import { parseTorrentBuffer, uint8ToBase64 } from '@/composables/useTorrentParser'
+import { detectKind, createBatchItem } from '@shared/utils/batchHelpers'
 import bencode from 'bencode'
 import {
   NModal,
@@ -32,15 +33,17 @@ import {
   NIcon,
   NInputGroup,
   NDataTable,
+  NTag,
+  NEllipsis,
 } from 'naive-ui'
 import { useAppMessage } from '@/composables/useAppMessage'
 import type { DataTableColumns } from 'naive-ui'
-import type { Aria2EngineOptions } from '@shared/types'
+import type { Aria2EngineOptions, BatchItem } from '@shared/types'
 import { FolderOpenOutline } from '@vicons/ionicons5'
 import TorrentUpload from './addtask/TorrentUpload.vue'
 import AdvancedOptions from './addtask/AdvancedOptions.vue'
 
-const props = defineProps<{ type: string; show: boolean }>()
+const props = defineProps<{ show: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
 const { t } = useI18n()
@@ -50,19 +53,12 @@ const taskStore = useTaskStore()
 const preferenceStore = usePreferenceStore()
 const message = useAppMessage()
 
-const activeTab = ref(props.type || ADD_TASK_TYPE.URI)
+const activeTab = ref(ADD_TASK_TYPE.URI)
 const slideDirection = ref<'left' | 'right'>('left')
 const showAdvanced = ref(false)
 const config = preferenceStore.config
-
-const torrentName = ref('')
-const torrentBase64 = ref('')
-const torrentLoaded = ref(false)
-const torrentInfoHash = ref('')
-const torrentFiles = ref<{ idx: number; path: string; length: number }[]>([])
-const selectedFileIndices = ref<number[]>([])
-const metalinkBase64 = ref('')
 const submitting = ref(false)
+const selectedBatchIndex = ref(0)
 
 const form = ref({
   uris: '',
@@ -77,7 +73,6 @@ const form = ref({
   newTaskShowDownloading: config.newTaskShowDownloading !== false,
 })
 
-const dialogTop = computed(() => (showAdvanced.value ? '8vh' : '12vh'))
 const maxSplit = computed(() => config.engineMaxConnectionPerServer || 64)
 
 const fileColumns: DataTableColumns = [
@@ -94,12 +89,35 @@ const fileColumns: DataTableColumns = [
   },
 ]
 
+// ── Computed batch accessors ────────────────────────────────────────
+
+const batch = computed(() => appStore.pendingBatch)
+const hasBatch = computed(() => batch.value.length > 0)
+const fileItems = computed(() => batch.value.filter((i) => i.kind !== 'uri'))
+const selectedItem = computed(() => fileItems.value[selectedBatchIndex.value] || null)
+
 const checkedRowKeys = computed({
-  get: () => selectedFileIndices.value,
+  get: () => selectedItem.value?.selectedFileIndices || [],
   set: (keys: number[]) => {
-    selectedFileIndices.value = keys
+    const item = selectedItem.value
+    if (item) item.selectedFileIndices = keys
   },
 })
+
+const submitLabel = computed(() => {
+  const pending = batch.value.filter((i) => i.status === 'pending').length
+  const failed = batch.value.filter((i) => i.status === 'failed').length
+  const count = pending + failed
+  if (count > 1) return `${t('app.submit')} (${count})`
+  return t('app.submit')
+})
+
+function handleTabChange(value: string) {
+  slideDirection.value = value === ADD_TASK_TYPE.TORRENT ? 'left' : 'right'
+  activeTab.value = value
+}
+
+// ── Lifecycle ───────────────────────────────────────────────────────
 
 onMounted(async () => {
   if (!form.value.dir) {
@@ -112,34 +130,27 @@ onMounted(async () => {
   }
 })
 
-watch(
-  () => props.type,
-  (val) => {
-    if (val) activeTab.value = val
-  },
-)
-
+// When dialog opens: resolve file items, set tab based on batch content
 watch(
   () => props.show,
   async (visible) => {
     if (!visible) return
-    if (appStore.droppedTorrentPaths.length > 0) {
-      // Snapshot and clear immediately to prevent the paths watcher from
-      // re-processing the same batch (both fire on showAddTaskDialog).
-      const paths = [...appStore.droppedTorrentPaths]
-      appStore.droppedTorrentPaths = []
-      await loadDroppedFile(paths[0])
-      for (let i = 1; i < paths.length; i++) {
-        autoSubmitFile(paths[i])
+    selectedBatchIndex.value = 0
+
+    if (hasBatch.value) {
+      // Resolve file-based items and auto-switch tab
+      await resolveUnresolvedItems()
+      if (fileItems.value.length > 0) {
+        activeTab.value = ADD_TASK_TYPE.TORRENT
+      } else {
+        activeTab.value = ADD_TASK_TYPE.URI
+        // Pre-fill URI textarea from batch URI items
+        const uriPayloads = batch.value.filter((i) => i.kind === 'uri').map((i) => i.payload)
+        if (uriPayloads.length > 0) form.value.uris = uriPayloads.join('\n')
       }
-      return
-    }
-    if (activeTab.value === ADD_TASK_TYPE.URI && !form.value.uris) {
-      if (appStore.addTaskUrl) {
-        form.value.uris = appStore.addTaskUrl
-        appStore.addTaskUrl = ''
-        return
-      }
+    } else {
+      activeTab.value = ADD_TASK_TYPE.URI
+      // No batch — check clipboard for URIs
       try {
         const { readText } = await import('@tauri-apps/plugin-clipboard-manager')
         const text = await readText()
@@ -153,141 +164,57 @@ watch(
   },
 )
 
-// Handles files dropped WHILE the dialog is already visible (drag-drop overlay).
-// Initial open is handled exclusively by the props.show watcher above.
+// Watch for new batch items added while dialog is already open (drag-drop)
 watch(
-  () => appStore.droppedTorrentPaths,
-  async (paths) => {
-    if (paths.length > 0 && props.show) {
-      const snapshot = [...paths]
-      appStore.droppedTorrentPaths = []
-      await loadDroppedFile(snapshot[0])
-      for (let i = 1; i < snapshot.length; i++) {
-        autoSubmitFile(snapshot[i])
-      }
+  () => batch.value.length,
+  async (newLen, oldLen) => {
+    if (!props.show || newLen <= oldLen) return
+    await resolveUnresolvedItems()
+    if (fileItems.value.length > 0) {
+      activeTab.value = ADD_TASK_TYPE.TORRENT
     }
   },
 )
 
-/**
- * Loads a dropped file (torrent or metalink) by detecting its extension.
- * Sets the appropriate base64 data and switches to the torrent tab.
- */
-async function loadDroppedFile(filePath: string) {
-  const lower = filePath.toLowerCase()
-  activeTab.value = ADD_TASK_TYPE.TORRENT
+// ── File resolution ─────────────────────────────────────────────────
 
-  if (lower.endsWith('.metalink') || lower.endsWith('.meta4')) {
-    // Metalink file: read as base64 for addMetalink API
-    try {
-      clearTorrent() // fully reset all torrent state before loading metalink
-      const bytes = await readFile(filePath)
-      const uint8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
-      metalinkBase64.value = uint8ToBase64(uint8)
-      torrentName.value =
-        filePath.substring(Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\')) + 1) || 'unknown.metalink'
-      torrentLoaded.value = true
-    } catch (e) {
-      logger.error('AddTask.loadMetalink', e)
+async function resolveUnresolvedItems() {
+  for (const item of batch.value) {
+    if (item.kind !== 'uri' && item.status === 'pending' && item.payload === item.source) {
+      await resolveFileItem(item)
     }
-  } else {
-    // Torrent file
-    metalinkBase64.value = ''
-    await loadTorrentFromPath(filePath)
   }
 }
 
-async function loadTorrentFromPath(filePath: string) {
+async function resolveFileItem(item: BatchItem) {
   try {
-    const bytes = await readFile(filePath)
+    const bytes = await readFile(item.source)
     const uint8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
-    torrentName.value =
-      filePath.substring(Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\')) + 1) || 'unknown.torrent'
-    torrentBase64.value = uint8ToBase64(uint8)
-    torrentLoaded.value = true
-    await parseTorrentData(uint8)
-  } catch (e) {
-    logger.error('AddTask.loadTorrentFromPath', e)
-  }
-}
+    item.payload = uint8ToBase64(uint8)
 
-/**
- * Auto-submits a file (torrent or metalink) without user interaction.
- * Used for batch file imports where only the first file gets the
- * interactive dialog and remaining files are submitted directly.
- */
-async function autoSubmitFile(filePath: string) {
-  try {
-    const lower = filePath.toLowerCase()
-    const bytes = await readFile(filePath)
-    const uint8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
-    const base64 = uint8ToBase64(uint8)
-    const options: Record<string, string> = { dir: form.value.dir }
-
-    if (lower.endsWith('.metalink') || lower.endsWith('.meta4')) {
-      await taskStore.addMetalink({ metalink: base64, options })
-    } else {
-      await taskStore.addTorrent({ torrent: base64, options })
-    }
-  } catch (e) {
-    logger.error('AddTask.autoSubmitFile', e)
-  }
-}
-
-async function parseTorrentData(uint8: Uint8Array) {
-  try {
-    const result = await parseTorrentBuffer(uint8, bencode)
-    if (!result) return
-
-    torrentInfoHash.value = result.infoHash
-    torrentFiles.value = result.files
-    selectedFileIndices.value = result.files.map((f) => f.idx)
-  } catch (e) {
-    logger.error('AddTask.parseTorrentData', e)
-    torrentFiles.value = []
-    selectedFileIndices.value = []
-  }
-}
-
-function clearTorrent() {
-  torrentName.value = ''
-  torrentBase64.value = ''
-  torrentLoaded.value = false
-  torrentInfoHash.value = ''
-  torrentFiles.value = []
-  selectedFileIndices.value = []
-  metalinkBase64.value = ''
-}
-
-function handleTabChange(name: string) {
-  slideDirection.value = name === ADD_TASK_TYPE.TORRENT ? 'left' : 'right'
-
-  // FLIP: snapshot current height before switch
-  const wrapper = document.querySelector('.add-task-card .n-tabs-pane-wrapper') as HTMLElement | null
-  const startHeight = wrapper?.offsetHeight ?? 0
-
-  activeTab.value = name
-
-  // After Vue renders new tab content, animate height using Web Animations API
-  // (runs on compositor layer, doesn't conflict with NUI's inline style management)
-  nextTick(() => {
-    requestAnimationFrame(() => {
-      if (wrapper) {
-        const endHeight = wrapper.scrollHeight
-        if (Math.abs(startHeight - endHeight) > 2) {
-          wrapper.animate([{ height: startHeight + 'px' }, { height: endHeight + 'px' }], {
-            duration: 300,
-            easing: 'cubic-bezier(0.2, 0, 0, 1)',
-          })
+    if (item.kind === 'torrent') {
+      try {
+        const meta = await parseTorrentBuffer(uint8, bencode)
+        if (meta) {
+          item.torrentMeta = meta
+          item.selectedFileIndices = meta.files.map((f) => f.idx)
         }
+      } catch (e) {
+        logger.debug('AddTask.parseTorrent', e)
       }
-    })
-  })
+    }
+  } catch (e) {
+    logger.error('AddTask.resolveFileItem', e)
+    item.status = 'failed'
+    item.error = e instanceof Error ? e.message : String(e)
+  }
 }
+
+// ── File chooser ────────────────────────────────────────────────────
 
 async function chooseDirectory() {
   try {
-    const selected = await openDialog({ directory: true, multiple: false })
+    const selected = await openDialog({ directory: true })
     if (typeof selected === 'string') form.value.dir = selected
   } catch (e) {
     logger.debug('AddTask.chooseDirectory', e)
@@ -300,87 +227,84 @@ async function chooseTorrentFile() {
       multiple: true,
       filters: [{ name: 'Torrent / Metalink', extensions: ['torrent', 'metalink', 'meta4'] }],
     })
-    if (typeof selected === 'string') {
-      await loadDroppedFile(selected)
-    } else if (Array.isArray(selected) && selected.length > 0) {
-      await loadDroppedFile(selected[0])
-      for (let i = 1; i < selected.length; i++) {
-        autoSubmitFile(selected[i])
+    const paths = typeof selected === 'string' ? [selected] : Array.isArray(selected) ? selected : []
+    if (paths.length > 0) {
+      const items = paths.map((p) => createBatchItem(detectKind(p), p))
+      for (const item of items) {
+        await resolveFileItem(item)
       }
+      appStore.pendingBatch = [...appStore.pendingBatch, ...items]
+      selectedBatchIndex.value = Math.max(0, fileItems.value.length - 1)
     }
   } catch (e) {
     logger.debug('AddTask.chooseTorrentFile', e)
   }
 }
 
+function clearTorrent() {
+  if (selectedItem.value) {
+    appStore.pendingBatch = batch.value.filter((i) => i !== selectedItem.value)
+    selectedBatchIndex.value = Math.min(selectedBatchIndex.value, Math.max(0, fileItems.value.length - 1))
+  }
+}
+
+function removeBatchItem(item: BatchItem) {
+  appStore.pendingBatch = batch.value.filter((i) => i !== item)
+  selectedBatchIndex.value = Math.min(selectedBatchIndex.value, Math.max(0, fileItems.value.length - 1))
+}
+
+// ── Submit ───────────────────────────────────────────────────────────
+
 function handleClose() {
   emit('close')
-  clearTorrent()
+  form.value.uris = ''
+  form.value.out = ''
+  form.value.userAgent = ''
+  form.value.authorization = ''
+  form.value.referer = ''
+  form.value.cookie = ''
+  form.value.allProxy = ''
+  submitting.value = false
+  selectedBatchIndex.value = 0
 }
 
 async function handleSubmit() {
   if (submitting.value) return
   submitting.value = true
+
   try {
-    if (activeTab.value === ADD_TASK_TYPE.URI) {
-      if (!form.value.uris.trim()) return
-      const uris = form.value.uris.split('\n').filter((u: string) => u.trim())
-      const options: Aria2EngineOptions = {
-        dir: form.value.dir,
-        split: String(form.value.split),
-        out: form.value.out || undefined,
-      }
-      if (form.value.userAgent) options['user-agent'] = form.value.userAgent
-      if (form.value.referer) options.referer = form.value.referer
-      const headers: string[] = []
-      if (form.value.cookie) headers.push(`Cookie: ${form.value.cookie}`)
-      if (form.value.authorization) headers.push(`Authorization: ${form.value.authorization}`)
-      if (headers.length > 0) options.header = headers
-      if (form.value.allProxy) options['all-proxy'] = form.value.allProxy
-      if (uris.length > 1 && form.value.out) {
-        delete options.out
-        let outs = buildOuts(uris, form.value.out)
-        if (outs.length === 0) {
-          const dotIdx = form.value.out.lastIndexOf('.')
-          const base = dotIdx > 0 ? form.value.out.substring(0, dotIdx) : form.value.out
-          const ext = dotIdx > 0 ? form.value.out.substring(dotIdx) : ''
-          outs = uris.map((_, i) => `${base}_${i + 1}${ext}`)
-        }
-        await taskStore.addUri({ uris, outs, options })
-      } else {
-        await taskStore.addUri({ uris, outs: [], options })
-      }
-    } else if (activeTab.value === ADD_TASK_TYPE.TORRENT && torrentBase64.value) {
-      if (torrentInfoHash.value && isEngineReady()) {
-        const { getClient } = await import('@/api/aria2')
-        const [active, waiting] = await Promise.all([
-          getClient().call<{ infoHash?: string }[]>('tellActive', ['infoHash']),
-          getClient().call<{ infoHash?: string }[]>('tellWaiting', 0, 1000, ['infoHash']),
-        ])
-        const existing = [...active, ...waiting].map((t) => t.infoHash).filter(Boolean)
-        if (existing.includes(torrentInfoHash.value)) {
-          message.warning(t('task.duplicate-task'), { duration: 5000, closable: true })
-          return
-        }
-      }
-      const options: Aria2EngineOptions = { dir: form.value.dir }
-      if (selectedFileIndices.value.length > 0 && selectedFileIndices.value.length < torrentFiles.value.length) {
-        options['select-file'] = selectedFileIndices.value.join(',')
-      }
-      await taskStore.addTorrent({ torrent: torrentBase64.value, options })
-    } else if (activeTab.value === ADD_TASK_TYPE.TORRENT && metalinkBase64.value) {
-      // Metalink file import
-      const options: Aria2EngineOptions = { dir: form.value.dir }
-      await taskStore.addMetalink({ metalink: metalinkBase64.value, options })
-    } else {
-      return
+    const options: Aria2EngineOptions = {
+      dir: form.value.dir,
+      split: String(form.value.split),
     }
-    message.success(t('task.add-task-success') || 'Task added successfully')
-    handleClose()
-    if (form.value.newTaskShowDownloading) {
-      router.push({ path: '/task/active' }).catch(() => {
-        /* duplicate navigation */
-      })
+    if (form.value.out) options.out = form.value.out
+    if (form.value.userAgent) options['user-agent'] = form.value.userAgent
+    if (form.value.referer) options.referer = form.value.referer
+    const headers: string[] = []
+    if (form.value.cookie) headers.push(`Cookie: ${form.value.cookie}`)
+    if (form.value.authorization) headers.push(`Authorization: ${form.value.authorization}`)
+    if (headers.length > 0) options.header = headers
+    if (form.value.allProxy) options['all-proxy'] = form.value.allProxy
+
+    if (hasBatch.value) {
+      await submitBatch(options)
+      // Also submit any manual URIs typed in the URI tab
+      if (form.value.uris.trim() && !batch.value.some((i) => i.kind === 'uri')) {
+        await submitManualUris(options)
+      }
+    } else {
+      await submitManualUris(options)
+    }
+
+    const failed = batch.value.filter((i) => i.status === 'failed')
+    if (failed.length > 0) {
+      message.warning(`${failed.length} ${t('task.failed') || 'failed'}`, { duration: 5000, closable: true })
+    } else {
+      message.success(t('task.add-task-success') || 'Task added successfully')
+      handleClose()
+      if (form.value.newTaskShowDownloading) {
+        router.push({ path: '/task/active' }).catch(() => {})
+      }
     }
   } catch (e: unknown) {
     const errMsg = e instanceof Error ? e.message : String(e)
@@ -388,10 +312,7 @@ async function handleSubmit() {
     if (errMsg.includes('not initialized') || !isEngineReady()) {
       message.error(t('app.engine-not-ready'), { duration: 5000, closable: true })
     } else if (/duplicate|already/i.test(errMsg)) {
-      message.warning(t('task.duplicate-task') || 'This task already exists and cannot be added again.', {
-        duration: 5000,
-        closable: true,
-      })
+      message.warning(errMsg, { duration: 5000, closable: true })
     } else {
       message.error(errMsg, { duration: 5000, closable: true })
     }
@@ -400,20 +321,65 @@ async function handleSubmit() {
   }
 }
 
-function handleHotkey(event: KeyboardEvent) {
-  if (!props.show) return
-  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-    event.preventDefault()
-    handleSubmit()
+async function submitBatch(options: Aria2EngineOptions) {
+  for (const item of batch.value) {
+    if (item.status !== 'pending' && item.status !== 'failed') continue
+    try {
+      if (item.kind === 'uri') {
+        await taskStore.addUri({ uris: [item.payload], outs: [], options })
+      } else if (item.kind === 'torrent') {
+        const opts: Aria2EngineOptions = { ...options }
+        delete opts.out
+        if (
+          item.selectedFileIndices &&
+          item.torrentMeta &&
+          item.selectedFileIndices.length > 0 &&
+          item.selectedFileIndices.length < item.torrentMeta.files.length
+        ) {
+          opts['select-file'] = item.selectedFileIndices.join(',')
+        }
+        await taskStore.addTorrent({ torrent: item.payload, options: opts })
+      } else if (item.kind === 'metalink') {
+        const opts: Aria2EngineOptions = { ...options }
+        delete opts.out
+        await taskStore.addMetalink({ metalink: item.payload, options: opts })
+      }
+      item.status = 'submitted'
+    } catch (e) {
+      item.status = 'failed'
+      item.error = e instanceof Error ? e.message : String(e)
+    }
   }
 }
 
-onMounted(() => {
-  document.addEventListener('keydown', handleHotkey)
-})
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleHotkey)
-})
+async function submitManualUris(options: Aria2EngineOptions) {
+  if (!form.value.uris.trim()) return
+  const uris = form.value.uris.split('\n').filter((u: string) => u.trim())
+  if (uris.length > 1 && form.value.out) {
+    delete options.out
+    let outs = buildOuts(uris, form.value.out)
+    if (outs.length === 0) {
+      const dotIdx = form.value.out.lastIndexOf('.')
+      const base = dotIdx > 0 ? form.value.out.substring(0, dotIdx) : form.value.out
+      const ext = dotIdx > 0 ? form.value.out.substring(dotIdx) : ''
+      outs = uris.map((_, i) => `${base}_${i + 1}${ext}`)
+    }
+    await taskStore.addUri({ uris, outs, options })
+  } else {
+    await taskStore.addUri({ uris, outs: [], options })
+  }
+}
+
+function kindTagType(kind: string): 'info' | 'success' | 'warning' {
+  switch (kind) {
+    case 'torrent':
+      return 'info'
+    case 'metalink':
+      return 'success'
+    default:
+      return 'warning'
+  }
+}
 </script>
 
 <template>
@@ -434,8 +400,8 @@ onUnmounted(() => {
       :title="t('task.new-task')"
       closable
       class="add-task-card"
-      :style="{ maxWidth: '680px', minWidth: '380px', width: '70vw', marginTop: dialogTop }"
-      :content-style="{ maxHeight: '60vh', overflowY: 'auto', overflowX: 'hidden' }"
+      :style="{ maxWidth: '680px', minWidth: '380px', width: '70vw', marginTop: '8vh' }"
+      :content-style="{ maxHeight: '60vh', overflowY: 'auto', overflowX: 'hidden', scrollbarGutter: 'stable' }"
       :segmented="{ footer: true }"
       @close="handleClose"
     >
@@ -454,18 +420,45 @@ onUnmounted(() => {
             </div>
           </NTabPane>
           <NTabPane :name="ADD_TASK_TYPE.TORRENT" :tab="t('task.torrent-task') || 'Torrent'">
+            <!-- Batch list when multiple file items -->
+            <div v-if="fileItems.length > 1" class="batch-list">
+              <div
+                v-for="(item, idx) in fileItems"
+                :key="item.id"
+                class="batch-item"
+                :class="{ 'batch-item-selected': idx === selectedBatchIndex }"
+                @click="selectedBatchIndex = idx"
+              >
+                <div class="batch-item-main">
+                  <NEllipsis :style="{ maxWidth: '420px', flex: 1 }">{{ item.displayName }}</NEllipsis>
+                  <NSpace :size="4" align="center" :wrap="false">
+                    <NTag :type="kindTagType(item.kind)" size="small" :bordered="false">
+                      {{ item.kind === 'metalink' ? 'Metalink' : 'Torrent' }}
+                    </NTag>
+                    <NTag v-if="item.status === 'failed'" type="error" size="small" :bordered="false">✕</NTag>
+                    <NButton quaternary size="tiny" @click.stop="removeBatchItem(item)">✕</NButton>
+                  </NSpace>
+                </div>
+                <div v-if="item.error" class="batch-item-error">{{ item.error }}</div>
+              </div>
+            </div>
+
+            <!-- Single torrent detail / upload area -->
             <TorrentUpload
-              :loaded="torrentLoaded"
-              :name="torrentName"
+              :loaded="!!selectedItem && selectedItem.payload !== selectedItem.source"
+              :name="selectedItem?.displayName || ''"
               @choose="chooseTorrentFile"
               @clear="clearTorrent"
             >
               <template #file-list>
-                <div v-if="torrentFiles.length > 0" class="torrent-file-list">
+                <div
+                  v-if="selectedItem?.torrentMeta && selectedItem.torrentMeta.files.length > 0"
+                  class="torrent-file-list"
+                >
                   <NDataTable
                     v-model:checked-row-keys="checkedRowKeys"
                     :columns="fileColumns"
-                    :data="torrentFiles"
+                    :data="selectedItem.torrentMeta.files"
                     :row-key="(row: any) => row.idx as number"
                     size="small"
                     :max-height="200"
@@ -514,7 +507,7 @@ onUnmounted(() => {
       <template #footer>
         <NSpace justify="end">
           <NButton @click="handleClose">{{ t('app.cancel') }}</NButton>
-          <NButton type="primary" :loading="submitting" @click="handleSubmit">{{ t('app.submit') }}</NButton>
+          <NButton type="primary" :loading="submitting" @click="handleSubmit">{{ submitLabel }}</NButton>
         </NSpace>
       </template>
     </NCard>
@@ -548,5 +541,38 @@ onUnmounted(() => {
 .tab-slide-right-leave-to {
   opacity: 0;
   transform: translateX(30px);
+}
+
+/* Batch item list */
+.batch-list {
+  margin-bottom: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--n-border-color, rgba(255, 255, 255, 0.09));
+  overflow: hidden;
+}
+.batch-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.batch-item:hover {
+  background: var(--n-color-hover, rgba(255, 255, 255, 0.04));
+}
+.batch-item-selected {
+  background: var(--n-color-hover, rgba(255, 255, 255, 0.06));
+}
+.batch-item + .batch-item {
+  border-top: 1px solid var(--n-border-color, rgba(255, 255, 255, 0.06));
+}
+.batch-item-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.batch-item-error {
+  color: var(--n-text-color-error, #e88080);
+  font-size: 12px;
+  margin-top: 4px;
 }
 </style>
