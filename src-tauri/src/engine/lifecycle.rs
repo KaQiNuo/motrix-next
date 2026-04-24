@@ -40,7 +40,7 @@ fn kill_process_by_pid(pid: u32) -> Result<(), String> {
 /// Spawns the aria2c engine process with the given configuration.
 /// Creates the download directory, cleans up stale port listeners, and passes
 /// whitelisted config keys as CLI arguments.
-pub fn start_engine(app: &tauri::AppHandle, _config: &serde_json::Value) -> Result<(), String> {
+pub fn start_engine(app: &tauri::AppHandle, config: &serde_json::Value) -> Result<(), String> {
     // Check if external aria2 is configured from the config store
     let use_external = (|| {
         let store = app.store("config.json").ok()?;
