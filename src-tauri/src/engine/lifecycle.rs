@@ -2,6 +2,7 @@ use std::sync::atomic::Ordering;
 use tauri::{Emitter, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
+use tauri_plugin_store::StoreExt;
 
 use super::args::build_start_args;
 use super::cleanup::cleanup_port;
