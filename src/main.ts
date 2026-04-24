@@ -196,10 +196,15 @@ window.addEventListener('unhandledrejection', (e) => {
           'rpc-listen-port': String(port),
         },
       })
-      // start_engine_command ONLY spawns the aria2c sidecar.
-      // Credential update + option sync happen in wait_for_engine
-      // (after aria2c is confirmed ready).
-      await invoke('start_engine_command')
+      // External aria2 mode: skip sidecar spawn, go straight to health check
+      if (config.useExternalAria2) {
+        logger.info('Engine', 'external aria2 mode: skipping sidecar spawn')
+      } else {
+        // start_engine_command ONLY spawns the aria2c sidecar.
+        // Credential update + option sync happen in wait_for_engine
+        // (after aria2c is confirmed ready).
+        await invoke('start_engine_command')
+      }
     } catch (e) {
       logger.error('Engine', e)
       return false

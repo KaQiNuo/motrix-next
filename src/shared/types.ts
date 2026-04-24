@@ -289,6 +289,17 @@ export interface AppConfig {
   fileAllocation: string
   /** Per-tab sort configuration (field + direction), persisted independently per tab. */
   taskSort: import('@/composables/useTaskSort').TaskSortConfig
+
+  // ── External Aria2 ────────────────────────────────────────────
+  /** Use an external aria2 instance instead of the built-in sidecar. */
+  useExternalAria2: boolean
+  /** Host address of the external aria2 RPC endpoint. */
+  externalAria2Host: string
+  /** Port of the external aria2 RPC endpoint. */
+  externalAria2Port: number
+  /** RPC secret (token) for the external aria2 instance. */
+  externalAria2Secret: string
+
   [key: string]: unknown
 }
 

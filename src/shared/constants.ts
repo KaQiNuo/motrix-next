@@ -285,6 +285,12 @@ export const DEFAULT_APP_CONFIG = {
   runMode: '',
   engineBinPath: '',
 
+  // ── External Aria2 ────────────────────────────────────────────
+  useExternalAria2: false,
+  externalAria2Host: '127.0.0.1',
+  externalAria2Port: 6800,
+  externalAria2Secret: '',
+
   // ── Tracker ───────────────────────────────────────────────────
   autoSyncTracker: true,
   trackerSource: [] as string[], // populated from DEFAULT_TRACKER_SOURCE below at runtime

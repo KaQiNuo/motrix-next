@@ -17,6 +17,7 @@ use tokio::sync::RwLock;
 /// after engine restart without reconstructing the client.
 pub struct Aria2Client {
     http: reqwest::Client,
+    host: RwLock<String>,
     port: RwLock<u16>,
     secret: RwLock<String>,
     request_id: AtomicU64,
@@ -33,6 +34,7 @@ impl Aria2Client {
     pub fn new(port: u16, secret: String) -> Self {
         Self {
             http: reqwest::Client::new(),
+            host: RwLock::new("127.0.0.1".to_string()),
             port: RwLock::new(port),
             secret: RwLock::new(secret),
             request_id: AtomicU64::new(1),
@@ -44,6 +46,11 @@ impl Aria2Client {
         *self.port.write().await = port;
         *self.secret.write().await = secret;
         log::info!("aria2 client credentials updated: port={}", port);
+    }
+
+    /// Updates host for external aria2 instances.
+    pub async fn update_host(&self, host: String) {
+        *self.host.write().await = host;
     }
 
     /// Builds the JSON-RPC params array with token prepended if secret is set.
@@ -76,7 +83,8 @@ impl Aria2Client {
             params,
         };
 
-        let url = format!("http://127.0.0.1:{port}/jsonrpc");
+        let host = self.host.read().await;
+        let url = format!("http://{host}:{port}/jsonrpc");
         let resp: reqwest::Response = self
             .http
             .post(&url)

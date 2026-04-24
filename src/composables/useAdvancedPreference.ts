@@ -69,6 +69,11 @@ export interface AdvancedForm {
   connectTimeout: number
   timeout: number
   fileAllocation: string
+  // External aria2
+  useExternalAria2: boolean
+  externalAria2Host: string
+  externalAria2Port: number
+  externalAria2Secret: string
 }
 
 // ── Pure Functions ──────────────────────────────────────────────────
@@ -144,6 +149,11 @@ export function buildAdvancedForm(config: AppConfig): {
       connectTimeout: config.connectTimeout ?? D.connectTimeout,
       timeout: config.timeout ?? D.timeout,
       fileAllocation: config.fileAllocation ?? D.fileAllocation,
+      // External aria2
+      useExternalAria2: config.useExternalAria2 ?? D.useExternalAria2,
+      externalAria2Host: config.externalAria2Host ?? D.externalAria2Host,
+      externalAria2Port: config.externalAria2Port ?? D.externalAria2Port,
+      externalAria2Secret: config.externalAria2Secret ?? D.externalAria2Secret,
     },
     generatedSecret,
     generatedApiSecret,

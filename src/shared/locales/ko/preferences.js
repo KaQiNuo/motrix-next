@@ -208,6 +208,13 @@ export default {
   'high-split-reason': '세그먼트가 너무 많으면 디스크 병목 현상이 발생할 수 있습니다',
   'high-connection-reason': '서버 속도 제한 또는 IP 차단이 발생할 수 있습니다',
   'high-bt-peers-reason': '피어가 너무 많으면 메모리 소비가 증가합니다',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'aria2 다운로드 엔진',
   'hardware-rendering': 'GPU 하드웨어 가속',
   'hardware-rendering-hint': '최적의 렌더링 성능을 위해 WebKitGTK DMA-BUF 하드웨어 가속이 기본적으로 활성화되어 있습니다. 현재 GPU에서 흰 화면이나 충돌이 발생하면 이 옵션을 비활성화하여 소프트웨어 렌더링으로 전환하세요.',

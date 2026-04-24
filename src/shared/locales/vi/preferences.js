@@ -208,6 +208,13 @@ export default {
   'high-split-reason': 'Quá nhiều phân đoạn có thể gây tắc nghẽn đĩa',
   'high-connection-reason': 'Có thể kích hoạt giới hạn tốc độ hoặc chặn IP',
   'high-bt-peers-reason': 'Quá nhiều nút tăng tiêu thụ bộ nhớ',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'Công cụ tải xuống aria2',
   'hardware-rendering': 'Tăng tốc GPU',
   'hardware-rendering-hint': 'Tăng tốc phần cứng WebKitGTK DMA-BUF được bật mặc định để có hiệu suất kết xuất tốt nhất. Nếu gặp màn hình trắng hoặc sập với GPU hiện tại, hãy tắt tùy chọn này để chuyển về kết xuất phần mềm.',

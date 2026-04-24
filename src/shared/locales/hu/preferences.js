@@ -208,6 +208,13 @@ export default {
   'high-split-reason': 'Túl sok szegmens lemezes szűk keresztmetszetet okozhat',
   'high-connection-reason': 'Sebességkorlátozást vagy IP-tiltást válthat ki',
   'high-bt-peers-reason': 'Sok csomópont növeli a memóriahasználatot',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'aria2 letöltőmotor',
   'hardware-rendering': 'GPU hardveres gyorsítás',
   'hardware-rendering-hint': 'A WebKitGTK DMA-BUF hardveres gyorsítás alapértelmezetten bekapcsolt a legjobb teljesítmény érdekében. Ha fehér képernyőt vagy összeomlást tapasztal az aktuális GPU-val, kapcsolja ki ezt a lehetőséget a szoftveres renderelésre váltáshoz.',

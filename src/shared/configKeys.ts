@@ -15,6 +15,10 @@ const userKeys = [
   'delete-files-when-skip-confirm',
   'enable-upnp',
   'engine-bin-path',
+  'external-aria2-host',
+  'external-aria2-port',
+  'external-aria2-secret',
+  'use-external-aria2',
   'extension-api-port',
   'extension-api-secret',
   'favorite-directories',
@@ -184,6 +188,15 @@ const systemKeys = [
   'user-agent',
 ]
 
-const needRestartKeys = ['dht-listen-port', 'listen-port', 'rpc-listen-port', 'rpc-secret']
+const needRestartKeys = [
+  'dht-listen-port',
+  'listen-port',
+  'rpc-listen-port',
+  'rpc-secret',
+  'use-external-aria2',
+  'external-aria2-host',
+  'external-aria2-port',
+  'external-aria2-secret',
+]
 
 export { userKeys, systemKeys, needRestartKeys }

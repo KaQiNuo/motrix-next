@@ -208,6 +208,13 @@ export default {
   'high-split-reason': '過多分段可能導致磁碟 I/O 瓶頸',
   'high-connection-reason': '可能觸發伺服器限速或 IP 封鎖',
   'high-bt-peers-reason': '過多節點連線會顯著增加記憶體消耗',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'aria2 下載引擎',
   'hardware-rendering': 'GPU 硬體加速',
   'hardware-rendering-hint': '預設啟用 WebKitGTK DMA-BUF 硬體加速以提供最佳渲染效能。若在目前顯卡上出現白屏或閃退，可關閉此選項回退至軟體渲染。',

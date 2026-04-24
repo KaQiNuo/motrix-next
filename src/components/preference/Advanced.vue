@@ -177,8 +177,8 @@ const { form, isDirty, handleSave, handleReset, resetSnapshot } = usePreferenceF
 
     // Engine restart — user already confirmed in beforeSave, execute immediately.
     if (checkIsNeedRestart(changed)) {
-      const port = f.rpcListenPort || ENGINE_RPC_PORT
-      const secret = f.rpcSecret || ''
+      const port = f.useExternalAria2 ? f.externalAria2Port || 6800 : f.rpcListenPort || ENGINE_RPC_PORT
+      const secret = f.useExternalAria2 ? f.externalAria2Secret || '' : f.rpcSecret || ''
       message.info(t('preferences.engine-restarting'))
       await nextTick()
       await new Promise((r) => requestAnimationFrame(r))
@@ -364,7 +364,13 @@ const {
 })
 
 function handleManualRestart() {
-  handleManualRestartAction(form.value.rpcListenPort as number, form.value.rpcSecret as string)
+  const port = form.value.useExternalAria2
+    ? (form.value.externalAria2Port as number) || 6800
+    : (form.value.rpcListenPort as number)
+  const secret = form.value.useExternalAria2
+    ? (form.value.externalAria2Secret as string) || ''
+    : (form.value.rpcSecret as string) || ''
+  handleManualRestartAction(port, secret)
 }
 
 onMounted(async () => {
@@ -471,6 +477,35 @@ onMounted(async () => {
           </NButton>
         </NInputGroup>
       </NFormItem>
+
+      <NDivider title-placement="left">{{ t('preferences.external-aria2-section') }}</NDivider>
+      <NFormItem :label="t('preferences.use-external-aria2')">
+        <NSwitch v-model:value="form.useExternalAria2" />
+      </NFormItem>
+      <NCollapseTransition :show="form.useExternalAria2" class="collapse-indent">
+        <NFormItem :label="t('preferences.external-aria2-host')">
+          <NInput
+            v-model:value="form.externalAria2Host"
+            :placeholder="t('preferences.external-aria2-host')"
+            style="flex: 1"
+          />
+        </NFormItem>
+        <NFormItem :label="t('preferences.external-aria2-port')">
+          <NInputNumber v-model:value="form.externalAria2Port" :min="1" :max="65535" style="width: 160px" />
+        </NFormItem>
+        <NFormItem :label="t('preferences.external-aria2-secret')">
+          <NInput
+            v-model:value="form.externalAria2Secret"
+            type="password"
+            show-password-on="click"
+            :placeholder="t('preferences.external-aria2-secret')"
+            style="flex: 1"
+          />
+        </NFormItem>
+        <NFormItem :show-label="false">
+          <div class="info-text">{{ t('preferences.external-aria2-tip') }}</div>
+        </NFormItem>
+      </NCollapseTransition>
 
       <NDivider title-placement="left">{{ t('preferences.engine-section') }}</NDivider>
       <NFormItem :label="t('preferences.aria2-conf-path')">

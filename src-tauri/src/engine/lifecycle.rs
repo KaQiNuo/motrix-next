@@ -40,7 +40,19 @@ fn kill_process_by_pid(pid: u32) -> Result<(), String> {
 /// Spawns the aria2c engine process with the given configuration.
 /// Creates the download directory, cleans up stale port listeners, and passes
 /// whitelisted config keys as CLI arguments.
-pub fn start_engine(app: &tauri::AppHandle, config: &serde_json::Value) -> Result<(), String> {
+pub fn start_engine(app: &tauri::AppHandle, _config: &serde_json::Value) -> Result<(), String> {
+    // Check if external aria2 is configured from the config store
+    let use_external = (|| {
+        let store = app.store("config.json").ok()?;
+        let prefs = store.get("preferences");
+        prefs?.get("useExternalAria2")?.as_bool()
+    })().unwrap_or(false);
+
+    if use_external {
+        log::info!("engine: external aria2 mode enabled, skipping sidecar spawn");
+        return Ok(());
+    }
+
     let state = app.state::<EngineState>();
     let mut child_lock = state.child.lock().map_err(|e| e.to_string())?;
 
@@ -248,6 +260,18 @@ pub fn stop_engine(app: &tauri::AppHandle, for_exit: bool) -> Result<(), String>
 /// This is the fix for: rapid "Save & Apply" → "Restart Engine" creating
 /// orphaned aria2c processes on all platforms.
 pub fn restart_engine(app: &tauri::AppHandle, config: &serde_json::Value) -> Result<(), String> {
+    // Skip sidecar lifecycle management when external aria2 is configured
+    let use_external = (|| {
+        let store = app.store("config.json").ok()?;
+        let prefs = store.get("preferences");
+        prefs?.get("useExternalAria2")?.as_bool()
+    })().unwrap_or(false);
+
+    if use_external {
+        log::info!("restart: external aria2 mode — skipping sidecar lifecycle");
+        return Ok(());
+    }
+
     let state = app.state::<EngineState>();
     // Signal intentional stop BEFORE kill so the old process's Terminated
     // handler suppresses engine-error.

@@ -208,6 +208,13 @@ export default {
   'high-split-reason': 'For mange segmenter kan forårsake diskflaskehals',
   'high-connection-reason': 'Kan utløse hastighetsbegrensning eller IP-blokkering',
   'high-bt-peers-reason': 'For mange noder øker minneforbruket',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'aria2-nedlastingsmotor',
   'hardware-rendering': 'GPU maskinvareakselerasjon',
   'hardware-rendering-hint': 'WebKitGTK DMA-BUF maskinvareakselerasjon er aktivert som standard for best ytelse. Hvis du opplever hvit skjerm eller krasj med nåværende GPU, deaktiver dette alternativet for å falle tilbake til programvarerendering.',

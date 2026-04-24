@@ -208,6 +208,13 @@ export default {
   'high-split-reason': 'كثرة الأجزاء قد تسبب ازدحام القرص',
   'high-connection-reason': 'قد يؤدي إلى تقييد السرعة أو حظر IP',
   'high-bt-peers-reason': 'كثرة العقد تزيد استهلاك الذاكرة',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'محرك التنزيل aria2',
   'hardware-rendering': 'تسريع GPU',
   'hardware-rendering-hint': 'تسريع WebKitGTK DMA-BUF مفعّل افتراضيًا لأفضل أداء عرض. إذا ظهرت شاشة بيضاء أو توقف مفاجئ مع بطاقتك الحالية، يمكنك إيقاف هذا الخيار للعودة إلى العرض البرمجي.',

@@ -208,6 +208,13 @@ export default {
   'high-split-reason': 'Prea multe segmente pot cauza blocaje de disc',
   'high-connection-reason': 'Poate declanșa limitarea vitezei sau blocarea IP-ului',
   'high-bt-peers-reason': 'Prea multe noduri cresc consumul de memorie',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'Motor de descărcare aria2',
   'hardware-rendering': 'Accelerare GPU',
   'hardware-rendering-hint': 'Accelerarea hardware WebKitGTK DMA-BUF este activată implicit pentru performanță optimă. Dacă întâmpinați ecran alb sau blocare cu GPU-ul actual, dezactivați această opțiune pentru a reveni la redarea software.',

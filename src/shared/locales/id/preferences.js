@@ -208,6 +208,13 @@ export default {
   'high-split-reason': 'Terlalu banyak segmen dapat menyebabkan kemacetan disk',
   'high-connection-reason': 'Dapat memicu pembatasan kecepatan atau pemblokiran IP',
   'high-bt-peers-reason': 'Terlalu banyak node meningkatkan penggunaan memori',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'Mesin Unduh aria2',
   'hardware-rendering': 'Akselerasi GPU',
   'hardware-rendering-hint': 'Akselerasi perangkat keras WebKitGTK DMA-BUF diaktifkan secara default untuk performa rendering terbaik. Jika Anda mengalami layar kosong atau crash dengan GPU saat ini, nonaktifkan opsi ini untuk beralih ke rendering perangkat lunak.',

@@ -68,11 +68,12 @@ pub async fn wait_for_engine(app: AppHandle) -> Result<bool, AppError> {
     const MAX_RETRIES: u32 = 5;
     const BASE_DELAY_MS: u64 = 200;
 
-    let (port, secret) = services::read_engine_credentials_from_app(&app)?;
+    let (host, port, secret) = services::read_engine_credentials_from_app(&app)?;
 
     // Update Aria2Client credentials BEFORE probing so the probe
-    // targets the correct port/secret.
+    // targets the correct host/port/secret.
     if let Some(aria2) = app.try_state::<Aria2State>() {
+        aria2.0.update_host(host).await;
         aria2.0.update_credentials(port, secret).await;
     }
 

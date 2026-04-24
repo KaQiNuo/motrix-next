@@ -90,9 +90,10 @@ fn read_system_options(
 /// 5. Stop existing background services (handles restart gracefully)
 /// 6. Spawn fresh background services (stat, speed scheduler, task monitor)
 pub async fn on_engine_ready(app: &tauri::AppHandle) -> Result<(), AppError> {
-    // 1. Update Aria2Client credentials
-    let (port, secret) = read_engine_credentials(app)?;
+    // 1. Update Aria2Client credentials (host, port, secret)
+    let (host, port, secret) = read_engine_credentials(app)?;
     if let Some(aria2) = app.try_state::<Aria2State>() {
+        aria2.0.update_host(host).await;
         aria2.0.update_credentials(port, secret).await;
     }
 
@@ -244,36 +245,71 @@ async fn spawn_background_services(app: &tauri::AppHandle) {
     log::info!("runtime_services: spawned stat_service + speed_scheduler + task_monitor");
 }
 
-/// Read engine port and secret from the config store.
-fn read_engine_credentials(app: &tauri::AppHandle) -> Result<(u16, String), AppError> {
+/// Read engine host, port and secret from the config store.
+/// Returns (host, port, secret) — host defaults to 127.0.0.1 for built-in sidecar.
+fn read_engine_credentials(app: &tauri::AppHandle) -> Result<(String, u16, String), AppError> {
     let store = app
         .store("config.json")
         .map_err(|e| AppError::Store(format!("Failed to open config.json: {e}")))?;
 
     let prefs = store.get("preferences");
 
-    let port = prefs
+    let use_external = prefs
         .as_ref()
-        .and_then(|p| {
-            p.get("rpcListenPort").and_then(|v| {
-                v.as_u64()
-                    .map(|n| n as u16)
-                    .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
+        .and_then(|p| p.get("useExternalAria2")?.as_bool())
+        .unwrap_or(false);
+
+    let host = if use_external {
+        prefs
+            .as_ref()
+            .and_then(|p| p.get("externalAria2Host")?.as_str().map(String::from))
+            .unwrap_or_else(|| "127.0.0.1".to_string())
+    } else {
+        "127.0.0.1".to_string()
+    };
+
+    let port = if use_external {
+        prefs
+            .as_ref()
+            .and_then(|p| {
+                p.get("externalAria2Port").and_then(|v| {
+                    v.as_u64()
+                        .map(|n| n as u16)
+                        .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
+                })
             })
-        })
-        .unwrap_or(16800);
+            .unwrap_or(6800)
+    } else {
+        prefs
+            .as_ref()
+            .and_then(|p| {
+                p.get("rpcListenPort").and_then(|v| {
+                    v.as_u64()
+                        .map(|n| n as u16)
+                        .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
+                })
+            })
+            .unwrap_or(16800)
+    };
 
-    let secret = prefs
-        .as_ref()
-        .and_then(|p| p.get("rpcSecret")?.as_str().map(String::from))
-        .unwrap_or_default();
+    let secret = if use_external {
+        prefs
+            .as_ref()
+            .and_then(|p| p.get("externalAria2Secret")?.as_str().map(String::from))
+            .unwrap_or_default()
+    } else {
+        prefs
+            .as_ref()
+            .and_then(|p| p.get("rpcSecret")?.as_str().map(String::from))
+            .unwrap_or_default()
+    };
 
-    Ok((port, secret))
+    Ok((host, port, secret))
 }
 
 /// Public wrapper for use by commands that need engine credentials
 /// without running the full `on_engine_ready` orchestration.
-pub fn read_engine_credentials_from_app(app: &tauri::AppHandle) -> Result<(u16, String), AppError> {
+pub fn read_engine_credentials_from_app(app: &tauri::AppHandle) -> Result<(String, u16, String), AppError> {
     read_engine_credentials(app)
 }
 

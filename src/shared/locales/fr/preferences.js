@@ -208,6 +208,13 @@ export default {
   'high-split-reason': 'Trop de segments peut surcharger le disque',
   'high-connection-reason': 'Peut déclencher une limitation ou un blocage IP',
   'high-bt-peers-reason': 'Trop de pairs augmente la consommation mémoire',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'Moteur de téléchargement aria2',
   'hardware-rendering': 'Accélération GPU',
   'hardware-rendering-hint': 'L\'accélération matérielle WebKitGTK DMA-BUF est activée par défaut pour des performances optimales. En cas d\'écran blanc ou de plantage avec votre GPU actuel, désactivez cette option pour revenir au rendu logiciel.',

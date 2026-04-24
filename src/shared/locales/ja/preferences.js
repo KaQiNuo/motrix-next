@@ -208,6 +208,13 @@ export default {
   'high-split-reason': 'セグメント過多はディスク I/O のボトルネックになる可能性があります',
   'high-connection-reason': 'サーバーの速度制限や IP ブロックを引き起こす可能性があります',
   'high-bt-peers-reason': 'ピア過多はメモリ消費量を増加させます',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'aria2 ダウンロードエンジン',
   'hardware-rendering': 'GPU ハードウェアアクセラレーション',
   'hardware-rendering-hint': 'WebKitGTK DMA-BUF ハードウェアアクセラレーションは最適なレンダリング性能のためデフォルトで有効です。使用中の GPU で白画面やクラッシュが発生する場合は、このオプションを無効にしてソフトウェアレンダリングに切り替えてください。',

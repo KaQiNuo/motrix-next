@@ -208,6 +208,13 @@ export default {
   'high-split-reason': 'Too many segments may cause disk I/O bottleneck',
   'high-connection-reason': 'May trigger server rate limiting or IP ban',
   'high-bt-peers-reason': 'Too many peers increases memory consumption',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'aria2 Download Engine',
   'hardware-rendering': 'GPU Hardware Acceleration',
   'hardware-rendering-hint': 'WebKitGTK DMA-BUF hardware acceleration is enabled by default for optimal rendering performance. If you experience a blank screen or crash with your current GPU, disable this option to fall back to software rendering.',

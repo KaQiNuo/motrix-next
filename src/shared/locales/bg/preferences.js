@@ -208,6 +208,13 @@ export default {
   'high-split-reason': 'Твърде много сегменти може да претоварят диска',
   'high-connection-reason': 'Може да предизвика ограничаване или IP забрана',
   'high-bt-peers-reason': 'Много възли увеличават паметта',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'Двигател за изтегляне aria2',
   'hardware-rendering': 'GPU хардуерно ускорение',
   'hardware-rendering-hint': 'WebKitGTK DMA-BUF хардуерно ускорение е включено по подразбиране за най-добра производителност. Ако срещнете бял екран или срив с текущата видеокарта, изключете тази опция за софтуерно рендериране.',

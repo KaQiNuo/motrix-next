@@ -208,6 +208,13 @@ export default {
   'high-split-reason': 'Te veel segmenten kunnen een schijfknelpunt veroorzaken',
   'high-connection-reason': 'Kan snelheidsbeperking of IP-blokkering veroorzaken',
   'high-bt-peers-reason': 'Te veel knooppunten verhoogt het geheugenverbruik',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'aria2-downloadengine',
   'hardware-rendering': 'GPU-hardwareversnelling',
   'hardware-rendering-hint': 'WebKitGTK DMA-BUF hardwareversnelling is standaard ingeschakeld voor de beste prestaties. Bij een wit scherm of crash met uw huidige GPU kunt u deze optie uitschakelen om terug te vallen op softwarerendering.',

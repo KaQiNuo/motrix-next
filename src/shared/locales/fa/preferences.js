@@ -208,6 +208,13 @@ export default {
   'high-split-reason': 'بخش‌های زیاد ممکن است دیسک را تحت فشار قرار دهد',
   'high-connection-reason': 'ممکن است محدودیت سرعت یا مسدودسازی IP ایجاد کند',
   'high-bt-peers-reason': 'گره‌های زیاد حافظه بیشتری مصرف می‌کنند',
+  'external-aria2-section': 'External Aria2',
+  'use-external-aria2': 'Use external aria2',
+  'external-aria2-host': 'Host',
+  'external-aria2-port': 'Port',
+  'external-aria2-secret': 'RPC Secret',
+  'external-aria2-tip': 'When enabled, Motrix Next will connect to an external aria2 instance instead of launching its built-in sidecar.',
+
   'engine-section': 'موتور دانلود aria2',
   'hardware-rendering': 'شتاب‌دهی GPU',
   'hardware-rendering-hint': 'شتاب‌دهی سخت‌افزاری WebKitGTK DMA-BUF به‌طور پیش‌فرض برای بهترین عملکرد فعال است. اگر صفحه سفید یا خرابی با GPU فعلی تجربه می‌کنید، این گزینه را غیرفعال کنید تا به رندر نرم‌افزاری برگردید.',

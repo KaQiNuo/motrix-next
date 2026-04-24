@@ -258,6 +258,10 @@ describe('buildAdvancedSystemConfig', () => {
     connectTimeout: 60,
     timeout: 60,
     fileAllocation: 'prealloc',
+    useExternalAria2: false,
+    externalAria2Host: '127.0.0.1',
+    externalAria2Port: 6800,
+    externalAria2Secret: '',
   }
 
   it('maps all required aria2 config keys', () => {
@@ -345,6 +349,10 @@ describe('transformAdvancedForStore', () => {
       connectTimeout: 60,
       timeout: 60,
       fileAllocation: 'prealloc',
+      useExternalAria2: false,
+      externalAria2Host: '127.0.0.1',
+      externalAria2Port: 6800,
+      externalAria2Secret: '',
     }
     const result = transformAdvancedForStore(form)
     expect(result.btTracker).toBe('udp://a,udp://b')
@@ -381,6 +389,10 @@ describe('transformAdvancedForStore', () => {
       connectTimeout: 60,
       timeout: 60,
       fileAllocation: 'prealloc',
+      useExternalAria2: false,
+      externalAria2Host: '127.0.0.1',
+      externalAria2Port: 6800,
+      externalAria2Secret: '',
     }
     const result = transformAdvancedForStore(form)
     expect(result.listenPort).toBe(21301)
@@ -515,6 +527,10 @@ describe('validateAdvancedForm', () => {
     connectTimeout: 60,
     timeout: 60,
     fileAllocation: 'prealloc',
+    useExternalAria2: false,
+    externalAria2Host: '127.0.0.1',
+    externalAria2Port: 6800,
+    externalAria2Secret: '',
   }
 
   it('returns null for valid form', () => {
@@ -670,6 +686,10 @@ describe('proxy configuration invariants', () => {
       connectTimeout: 60,
       timeout: 60,
       fileAllocation: 'prealloc',
+      useExternalAria2: false,
+      externalAria2Host: '127.0.0.1',
+      externalAria2Port: 6800,
+      externalAria2Secret: '',
     }
     const systemConfig = buildAdvancedSystemConfig(form)
     // Empty string is intentional — aria2 accepts '' to clear the proxy
@@ -713,6 +733,10 @@ describe('proxy configuration invariants', () => {
       connectTimeout: 60,
       timeout: 60,
       fileAllocation: 'prealloc',
+      useExternalAria2: false,
+      externalAria2Host: '127.0.0.1',
+      externalAria2Port: 6800,
+      externalAria2Secret: '',
     }
     const systemConfig = buildAdvancedSystemConfig(form)
     expect(systemConfig['all-proxy']).toBe('')
@@ -754,6 +778,10 @@ describe('proxy configuration invariants', () => {
       connectTimeout: 60,
       timeout: 60,
       fileAllocation: 'prealloc',
+      useExternalAria2: false,
+      externalAria2Host: '127.0.0.1',
+      externalAria2Port: 6800,
+      externalAria2Secret: '',
     }
     const systemConfig = buildAdvancedSystemConfig(form)
     expect(systemConfig['all-proxy']).toBe('http://proxy:8080')
@@ -814,6 +842,10 @@ describe('transformAdvancedForStore — hardwareRendering', () => {
       connectTimeout: 60,
       timeout: 60,
       fileAllocation: 'prealloc',
+      useExternalAria2: false,
+      externalAria2Host: '127.0.0.1',
+      externalAria2Port: 6800,
+      externalAria2Secret: '',
     }
     const result = transformAdvancedForStore(form)
     expect(result.hardwareRendering).toBe(true)
