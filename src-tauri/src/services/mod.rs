@@ -309,7 +309,9 @@ fn read_engine_credentials(app: &tauri::AppHandle) -> Result<(String, u16, Strin
 
 /// Public wrapper for use by commands that need engine credentials
 /// without running the full `on_engine_ready` orchestration.
-pub fn read_engine_credentials_from_app(app: &tauri::AppHandle) -> Result<(String, u16, String), AppError> {
+pub fn read_engine_credentials_from_app(
+    app: &tauri::AppHandle,
+) -> Result<(String, u16, String), AppError> {
     read_engine_credentials(app)
 }
 

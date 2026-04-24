@@ -46,7 +46,8 @@ pub fn start_engine(app: &tauri::AppHandle, _config: &serde_json::Value) -> Resu
         let store = app.store("config.json").ok()?;
         let prefs = store.get("preferences");
         prefs?.get("useExternalAria2")?.as_bool()
-    })().unwrap_or(false);
+    })()
+    .unwrap_or(false);
 
     if use_external {
         log::info!("engine: external aria2 mode enabled, skipping sidecar spawn");
@@ -265,7 +266,8 @@ pub fn restart_engine(app: &tauri::AppHandle, config: &serde_json::Value) -> Res
         let store = app.store("config.json").ok()?;
         let prefs = store.get("preferences");
         prefs?.get("useExternalAria2")?.as_bool()
-    })().unwrap_or(false);
+    })()
+    .unwrap_or(false);
 
     if use_external {
         log::info!("restart: external aria2 mode — skipping sidecar lifecycle");
